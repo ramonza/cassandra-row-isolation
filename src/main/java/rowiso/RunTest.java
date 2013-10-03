@@ -19,31 +19,44 @@ public class RunTest {
 		cluster = Cluster.builder().addContactPoint("localhost").build();
 		try {
 			loadDefs();
-
-			List<Thread> updaters = new ArrayList<>();
-			for (int thread = 0; thread < 4; thread++) {
-				updaters.add(startUpdater());
-			}
-
-			while (!allDone(updaters)) {
-				Session readerSession = cluster.connect("row_iso");
-				PreparedStatement sel = readerSession.prepare("select x, y from table1 where key = 'dummy'");
-				ResultSet result = readerSession.execute(sel.bind());
-				final Row row = result.one();
-				final int x = row.getInt(0);
-				final int y = row.getInt(1);
-				if (x + y != 10) {
-					System.out.printf("x = %d, y = %d - invariant fails%n", x, y);
-				} else {
-					System.out.println("invariant holds");
-				}
-				Thread.sleep(100);
-			}
-
+			runIsolationTest(1);
+			runIsolationTest(4);
 		} finally {
 			cluster.shutdown();
 		}
 
+	}
+
+	private void runIsolationTest(int updaterCount) throws InterruptedException {
+		System.out.printf("== Testing row isolation with %d concurrent updater(s) ==%n", updaterCount);
+
+		List<Thread> updaters = new ArrayList<>();
+		for (int thread = 0; thread < updaterCount; thread++) {
+			updaters.add(startUpdater());
+		}
+
+		boolean success = true;
+
+		while (!allDone(updaters)) {
+			Session readerSession = cluster.connect("row_iso");
+			PreparedStatement sel = readerSession.prepare("select x, y from table1 where key = 'dummy'");
+			ResultSet result = readerSession.execute(sel.bind());
+			final Row row = result.one();
+			final int x = row.getInt(0);
+			final int y = row.getInt(1);
+			if (x + y != 10) {
+				System.out.printf("x = %d, y = %d - invariant fails%n", x, y);
+				success = false;
+			} else {
+				System.out.println("invariant holds");
+			}
+			Thread.sleep(100);
+		}
+
+		if (success)
+			System.out.println("** Result: passed");
+		else
+			System.out.println("** Result: failed");
 	}
 
 	private boolean allDone(List<Thread> threads) {

@@ -8,6 +8,6 @@ since 1.1.
 
 Unfortunately, this does not work even on a single node cluster. Tested on Cassandra 2.0.1.
 
-To run the test:
+To run the test you need Cassandra running on localhost, then run:
 
     ./gradlew run
