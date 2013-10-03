@@ -81,6 +81,8 @@ public class RunTest {
 		Session session = cluster.connect();
 		try {
 			session.execute("create keyspace row_iso with replication = {'class': 'SimpleStrategy', 'replication_factor': 3}");
+		} catch (AlreadyExistsException ignored) {}
+		try {
 			session.execute("create table row_iso.table1(key varchar primary key, x int, y int)");
 		} catch (AlreadyExistsException ignored) {}
 	}
